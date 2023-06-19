@@ -1,22 +1,35 @@
-import { NativeModules, Platform } from 'react-native';
+import { NativeEventEmitter, NativeModules } from 'react-native';
 
-const LINKING_ERROR =
-  `The package 'react-native-mk-local-search' doesn't seem to be linked. Make sure: \n\n` +
-  Platform.select({ ios: "- You have run 'pod install'\n", default: '' }) +
-  '- You rebuilt the app after installing the package\n' +
-  '- You are not using Expo Go\n';
+const { LocalSearchManager } = NativeModules;
 
-const MkLocalSearch = NativeModules.MkLocalSearch
-  ? NativeModules.MkLocalSearch
-  : new Proxy(
-      {},
-      {
-        get() {
-          throw new Error(LINKING_ERROR);
-        },
-      }
-    );
+const LocalSearchEventEmitter = new NativeEventEmitter(LocalSearchManager);
 
-export function multiply(a: number, b: number): Promise<number> {
-  return MkLocalSearch.multiply(a, b);
-}
+export type SearchLocationResultItem = {
+  title: string;
+  subtitle: string;
+};
+
+export type Coodinate = {
+  latitude: number;
+  longitude: number;
+};
+
+export const searchLocations = async (text: string) => {
+  await LocalSearchManager.searchLocations(text);
+};
+
+export const updatedLocationResultsListener = (
+  listener: (event: SearchLocationResultItem[]) => Promise<void> | void
+) => {
+  const emitterSubscription = LocalSearchEventEmitter.addListener(
+    'onUpdatedLocationResults',
+    listener
+  );
+
+  return emitterSubscription;
+};
+
+export const searchCoodinate = async (query: string): Promise<Coodinate> => {
+  const result = await LocalSearchManager.searchCoodinate(query);
+  return result;
+};
